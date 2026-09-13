@@ -1,0 +1,1127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>All-Star Showcase: Ultimate Broadcast Flow</title>
+    <style>
+        /* --- DYNAMIC VARIABLES --- */
+        :root {
+            --main-bg: #363636;
+            --accent-color: #D4AF37;
+            /* Team Stinger Variables */
+            --ts-primary: #333;   
+            --ts-secondary: #D4AF37;
+        }
+
+        /* --- SCENE SETUP --- */
+        body {
+            margin: 0; padding: 0; overflow: hidden;
+            background-color: #0b0f19; /* Change to transparent for OBS */
+            color: white; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex; justify-content: center; align-items: center;
+            height: 100vh; perspective: 1500px;
+        }
+
+        /* =========================================
+           GPU OPTIMIZED TRANSITIONS
+        ========================================= */
+        .showcase-element {
+            position: absolute; transform-style: preserve-3d;
+            transition: transform 0.6s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.5s;
+            will-change: transform, opacity;
+            opacity: 0; 
+        }
+
+        .showcase-element.show { opacity: 1; transform: translate3d(0, 0, 0) rotateY(0deg) scale(1); pointer-events: auto; }
+        .showcase-element.hidden-left { opacity: 0; transform: translate3d(-1200px, 0, -400px) rotateY(30deg) scale(0.8); pointer-events: none; }
+        .showcase-element.hidden-right { opacity: 0; transform: translate3d(1200px, 0, -400px) rotateY(-30deg) scale(0.8); pointer-events: none; }
+
+        /* =========================================
+           1. LEAGUE / DIVISION STINGER STYLES
+        ========================================= */
+        #stinger-container {
+            display: none; position: absolute; top: 0; left: 0; width: 100vw; height: 100vh;
+            justify-content: center; align-items: center; z-index: 1000;
+        }
+
+        #stinger-container.play { display: flex; }
+        #stinger-container.play .curtain-accent { animation: expand-accent 2.3s cubic-bezier(0.7, 0, 0.3, 1) forwards; }
+        #stinger-container.play .curtain-main { animation: expand-main 2.3s cubic-bezier(0.7, 0, 0.3, 1) forwards; }
+        #stinger-container.play .impact-flash { animation: flash-anim 2.3s ease-out forwards; }
+        #stinger-container.play #logo-wrapper { animation: pop-wrapper-dynamic 2.3s ease-in-out forwards; }
+        #stinger-container.play .center-glow { animation: pulse-glow 2s infinite ease-in-out; }
+        #stinger-container.play .tech-ring { animation: spin-cw 12s linear infinite; }
+        #stinger-container.play .tech-ring-inner { animation: spin-ccw 8s linear infinite; }
+
+        .curtain-accent { position: absolute; top: 0; bottom: 0; width: 100%; background-color: var(--accent-color); transform: scaleX(0); transform-origin: center; z-index: 5; }
+        .curtain-main { position: absolute; top: 0; bottom: 0; width: 100%; background-color: var(--main-bg); transform: scaleX(0); transform-origin: center; z-index: 10; overflow: hidden; display: flex; justify-content: center; align-items: center; border-left: 5px solid #fff; border-right: 5px solid #fff; }
+        .texture-overlay { position: absolute; top: -50%; left: -50%; width: 200%; height: 200%; background: repeating-linear-gradient(45deg, transparent, transparent 10px, rgba(0, 0, 0, 0.4) 10px, rgba(0, 0, 0, 0.4) 20px); z-index: 11; }
+        .impact-flash { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: white; z-index: 30; opacity: 0; pointer-events: none; }
+        #logo-wrapper { position: absolute; z-index: 20; display: flex; justify-content: center; align-items: center; width: 1000px; height: 1000px; opacity: 0; }
+        .center-glow { position: absolute; width: 800px; height: 800px; background: radial-gradient(circle, var(--accent-color) 0%, transparent 70%); z-index: 19; }
+        .tech-ring { position: absolute; width: 850px; height: 850px; border: 3px dashed rgba(255, 255, 255, 0.3); border-radius: 50%; z-index: 20; box-sizing: border-box; }
+        .tech-ring-inner { position: absolute; width: 750px; height: 750px; border: 2px dotted rgba(255, 255, 255, 0.2); border-radius: 50%; z-index: 20; box-sizing: border-box; }
+        #logo-img { position: relative; z-index: 21; width: 650px; height: auto; max-height: 650px; object-fit: contain; filter: drop-shadow(0px 10px 40px rgba(0,0,0,0.9)); }
+
+        @keyframes expand-main { 0% { transform: scaleX(0); } 30% { transform: scaleX(1); } 70% { transform: scaleX(1); } 100% { transform: scaleX(0); } }
+        @keyframes expand-accent { 0% { transform: scaleX(0); } 35% { transform: scaleX(1); } 65% { transform: scaleX(1); } 100% { transform: scaleX(0); } }
+        @keyframes pop-wrapper-dynamic { 0% { transform: scale(0) rotate(-30deg); opacity: 0; } 35% { transform: scale(1.1) rotate(0deg); opacity: 1; } 45% { transform: scale(1) rotate(0deg); opacity: 1; } 65% { transform: scale(1) rotate(0deg); opacity: 1; } 100% { transform: scale(2) rotate(10deg); opacity: 0; } }
+        @keyframes flash-anim { 0%, 35% { opacity: 0; } 40% { opacity: 0.6; } 55% { opacity: 0; } }
+        @keyframes spin-cw { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        @keyframes spin-ccw { from { transform: rotate(360deg); } to { transform: rotate(0deg); } }
+        @keyframes pulse-glow { 0%, 100% { opacity: 0.5; transform: scale(1); } 50% { opacity: 1; transform: scale(1.05); } }
+
+        /* =========================================
+           2. FAST TEAM STINGER STYLES
+        ========================================= */
+        #team-stinger-container {
+            display: none; 
+            position: absolute; top: 0; left: 0; width: 100vw; height: 100vh;
+            overflow: hidden; background: transparent; z-index: 2000;
+            pointer-events: none; 
+        }
+
+        #team-stinger-container.play { display: flex; justify-content: center; align-items: center; }
+
+        .ts-panel-accent {
+            position: absolute; top: 0; left: 0; width: 150%; height: 100%;
+            background-color: var(--ts-secondary);
+            transform: translate3d(-120%, 0, 0) skewX(-20deg); 
+            z-index: 10; will-change: transform;
+        }
+
+        .ts-panel-main {
+            position: absolute; top: 0; left: 0; width: 150%; height: 100%;
+            background-color: var(--ts-primary);
+            transform: translate3d(-140%, 0, 0) skewX(-20deg);
+            z-index: 9; display: flex; justify-content: center; align-items: center;
+            border-right: 8px solid white; will-change: transform;
+        }
+
+        .ts-speed-lines {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: repeating-linear-gradient(90deg, transparent, transparent 50px, rgba(255,255,255,0.05) 50px, rgba(255,255,255,0.05) 52px);
+            transform: skewX(20deg); z-index: 11;
+        }
+
+        .ts-chevron {
+            position: absolute; top: 50%; left: 25%; width: 120px; height: 500px;
+            background: rgba(255,255,255,0.1); transform: translateY(-50%) skewX(-20deg);
+        }
+
+        #ts-logo-container {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 20;
+            display: flex; justify-content: center; align-items: center; will-change: transform;
+        }
+
+        #ts-logo-img {
+            max-width: 650px; max-height: 650px; object-fit: contain;
+            transform: translate3d(-100%, 0, 0); filter: drop-shadow(5px 5px 10px rgba(0,0,0,0.5));
+            will-change: transform, opacity;
+        }
+
+        .run-ts-accent { animation: slide-ts-accent 1.8s cubic-bezier(0.7, 0, 0.1, 1) forwards; }
+        .run-ts-main { animation: slide-ts-main 1.8s cubic-bezier(0.7, 0, 0.1, 1) forwards; }
+        .run-ts-container { animation: pan-ts-container 1.8s ease-out forwards; }
+        .run-ts-logo { animation: slide-ts-logo 1.8s cubic-bezier(0.2, 0.8, 0.2, 1) forwards; }
+
+        @keyframes slide-ts-accent { 
+            0% { transform: translate3d(-120%, 0, 0) skewX(-20deg); } 
+            40% { transform: translate3d(-5%, 0, 0) skewX(-20deg); } 
+            100% { transform: translate3d(120%, 0, 0) skewX(-20deg); } 
+        }
+        @keyframes slide-ts-main { 
+            0% { transform: translate3d(-140%, 0, 0) skewX(-20deg); } 
+            45% { transform: translate3d(-15%, 0, 0) skewX(-20deg); } 
+            60% { transform: translate3d(-10%, 0, 0) skewX(-20deg); } 
+            100% { transform: translate3d(120%, 0, 0) skewX(-20deg); } 
+        }
+        @keyframes slide-ts-logo { 
+            0% { transform: translate3d(-100%, 0, 0) scale(0.8); opacity: 0; } 
+            40% { transform: translate3d(0%, 0, 0) scale(1); opacity: 1; } 
+            60% { transform: translate3d(0%, 0, 0) scale(1); opacity: 1; } 
+            100% { transform: translate3d(150%, 0, 0) scale(1.1); opacity: 0; } 
+        }
+        @keyframes pan-ts-container { 
+            0% { transform: translate3d(-50px, 0, 0) skewX(-20deg); } 
+            100% { transform: translate3d(50px, 0, 0) skewX(-20deg); } 
+        }
+
+        /* =========================================
+           3. UI SLIDES & GRAPHICS
+        ========================================= */
+        .float-wrapper { transform-style: preserve-3d; animation: float-idle 4s ease-in-out infinite; }
+        @keyframes float-idle { 0%, 100% { transform: translateY(0px) rotateY(-5deg); } 50% { transform: translateY(-20px) rotateY(5deg); } }
+
+        /* Intro */
+        #intro-graphic { text-align: center; } 
+        .intro-title { font-size: 80px; font-weight: 900; text-transform: uppercase; line-height: 1.1; margin: 0; text-shadow: 0 10px 30px rgba(0, 0, 0, 0.8); }
+        .title-top { color: #ffffff; display: block; }
+        .title-bottom { 
+            background: linear-gradient(90deg, #FFD700 0%, #D4AF37 50%, #FFD700 100%); 
+            -webkit-background-clip: text; 
+            -webkit-text-fill-color: transparent; 
+            display: block; 
+            font-size: 96px; 
+            letter-spacing: 2px; 
+            filter: drop-shadow(0 0 15px rgba(212, 175, 55, 0.6)); 
+        }
+
+        /* Matchup */
+        #matchup-slide { text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        #matchup-master-box {
+            width: 1000px; padding: 80px; display: flex; flex-direction: column; align-items: center;
+            background: linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.01) 100%);
+            border-radius: 24px; box-shadow: 0 30px 60px rgba(0,0,0,0.6), inset 0 0 50px rgba(255,255,255,0.02);
+            backdrop-filter: blur(10px); border: 4px solid var(--accent-color);
+            transform-style: preserve-3d; will-change: transform, opacity; transition: border-color 0.5s;
+        }
+        .league-logo-box { display: flex; justify-content: center; align-items: center; width: 100%; }
+        #matchup-league-img { max-width: 600px; max-height: 250px; width: auto; height: auto; object-fit: contain; filter: drop-shadow(0px 10px 40px rgba(0,0,0,0.9)); transform: translateZ(60px); }
+        .matchup-row { display: flex; justify-content: center; align-items: center; gap: 100px; width: 100%; margin-top: 40px; transform-style: preserve-3d; transform: translateZ(20px); }
+        .side-group { text-align: center; width: 350px;}
+        .flag-img { width: 300px; height: auto; max-height: 200px; object-fit: contain; filter: drop-shadow(0 10px 20px rgba(0,0,0,0.7)); }
+        .side-text { font-size: 36px; font-weight: 900; text-transform: uppercase; letter-spacing: 3px; margin-top: 15px; }
+        .team-american .side-text { color: #00e5ff; text-shadow: 0 0 10px rgba(0,229,255,0.4); }
+        .team-international .side-text { color: #ff6d00; text-shadow: 0 0 10px rgba(255,109,0,0.4); }
+        .vs-text { font-size: 80px; font-weight: 900; text-transform: uppercase; font-style: italic; color: rgba(255,255,255,0.8); text-shadow: 0 0 20px rgba(255,255,255,0.3); }
+
+        /* Division */
+        #division-intro-slide { text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        #division-master-box {
+            width: 800px; padding: 60px; display: flex; flex-direction: column; align-items: center;
+            background: linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.01) 100%);
+            border-radius: 24px; box-shadow: 0 30px 60px rgba(0,0,0,0.6), inset 0 0 50px rgba(255,255,255,0.02);
+            backdrop-filter: blur(10px); border: 4px solid #00e5ff;
+            transform-style: preserve-3d; will-change: transform, opacity; transition: border-color 0.5s;
+        }
+        #division-logo-img { max-width: 400px; max-height: 250px; width: auto; height: auto; object-fit: contain; filter: drop-shadow(0px 10px 40px rgba(0,0,0,0.9)); transform: translateZ(60px); }
+        .division-text { font-size: 42px; font-weight: 900; text-transform: uppercase; line-height: 1.2; margin-top: 40px; text-shadow: 0 5px 15px rgba(0,0,0,0.8); transform: translateZ(40px); }
+
+        /* Freestyle Intro */
+        #freestyle-intro-slide { text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        #freestyle-intro-master-box {
+            width: 800px; padding: 60px; display: flex; flex-direction: column; align-items: center;
+            background: linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.01) 100%);
+            border-radius: 24px; box-shadow: 0 30px 60px rgba(0,0,0,0.6), inset 0 0 50px rgba(255,255,255,0.02);
+            backdrop-filter: blur(10px); border: 4px solid #fff;
+            transform-style: preserve-3d; will-change: transform, opacity; transition: border-color 0.5s;
+        }
+        #freestyle-intro-logo-img { max-width: 400px; max-height: 250px; width: auto; height: auto; object-fit: contain; filter: drop-shadow(0px 10px 40px rgba(0,0,0,0.9)); transform: translateZ(60px); }
+        .freestyle-intro-text { font-size: 42px; font-weight: 900; text-transform: uppercase; line-height: 1.2; margin-top: 40px; text-shadow: 0 5px 15px rgba(0,0,0,0.8); transform: translateZ(40px); }
+
+        /* =========================================
+           4. WIDE PLAYER DASHBOARD
+        ========================================= */
+        #master-controller { text-align: center; }
+        
+        .player-showcase-box {
+            width: 1100px; height: 620px;
+            background: linear-gradient(145deg, #131c31, #0a0f1c);
+            border: 4px solid #00e5ff; 
+            border-radius: 24px;
+            box-shadow: 0 30px 60px rgba(0, 0, 0, 0.8), inset 0 0 40px rgba(58, 80, 130, 0.4);
+            display: flex; overflow: hidden;
+            position: relative; transform-style: preserve-3d;
+            transition: border-color 0.5s, box-shadow 0.5s;
+        }
+
+        .player-showcase-box::after {
+            content: ''; position: absolute; top: -50%; left: -50%; width: 200%; height: 200%;
+            background: linear-gradient(to right, rgba(255,255,255,0) 0%, rgba(255,255,255,0.05) 50%, rgba(255,255,255,0) 100%);
+            transform: rotate(30deg) translateY(-100%); animation: shine 4s infinite; pointer-events: none; z-index: 15;
+        }
+
+        .model-side {
+            width: 380px; 
+            height: 100%;
+            background: rgba(0,0,0,0.4);
+            border-right: 2px solid rgba(255,255,255,0.1);
+            display: flex; justify-content: center; align-items: flex-end;
+            position: relative; z-index: 10; transform-style: preserve-3d;
+            overflow: hidden; 
+        }
+
+        #pc-model-img {
+            width: 100%; 
+            height: 95%; 
+            object-fit: contain; 
+            object-position: bottom center; 
+            filter: drop-shadow(10px 10px 20px rgba(0,0,0,0.8));
+            transform: translateZ(50px) scale(1.12); 
+            transform-origin: bottom center; 
+            will-change: transform;
+        }
+
+        .info-side {
+            flex: 1; padding: 30px 50px; display: flex; flex-direction: column;
+            text-align: left; transform-style: preserve-3d; z-index: 10;
+        }
+
+        .info-header {
+            display: flex; justify-content: space-between; align-items: flex-start;
+            border-bottom: 2px solid rgba(255,255,255,0.1); padding-bottom: 25px; margin-bottom: 25px;
+            transform: translateZ(30px);
+        }
+
+        .name-badge-group { display: flex; flex-direction: column; max-width: calc(100% - 120px); }
+        
+        #pc-name {
+            font-size: 60px; font-weight: 900; text-transform: uppercase; margin: 0; line-height: 1;
+            text-shadow: 0 5px 15px rgba(0, 229, 255, 0.6); 
+        }
+
+        /* Container for badges row */
+        .badge-row {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-top: 15px;
+            transform: translateZ(30px);
+        }
+        
+        #pc-status {
+            align-self: flex-start; font-size: 18px; font-weight: 900; letter-spacing: 4px;
+            padding: 6px 16px; border-radius: 8px;
+            background: rgba(0, 229, 255, 0.2); border: 1px solid #00e5ff; color: #fff;
+        }
+
+        /* New styles for selections badge */
+        .selections-badge {
+            align-self: flex-start; font-size: 16px; font-weight: 900; letter-spacing: 2px;
+            padding: 6px 16px; border-radius: 8px; white-space: nowrap;
+            color: #fff;
+            text-shadow: 0 0 10px rgba(0,229,255,0.5); 
+        }
+
+        #pc-team-logo {
+            width: 100px; height: 100px; object-fit: contain;
+            filter: drop-shadow(0 5px 10px rgba(0,0,0,0.5));
+        }
+
+        .stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; transform: translateZ(20px); }
+        .stat-box { background: rgba(255,255,255,0.03); padding: 15px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05); text-align: center; }
+        .stat-label { font-size: 14px; color: #aaa; letter-spacing: 2px; font-weight: bold; margin-bottom: 5px; }
+        .stat-val { font-size: 36px; font-weight: 900; color: #fff; }
+        
+        .highlight-stat { grid-column: span 3; background: linear-gradient(90deg, rgba(0, 229, 255, 0.05), rgba(0, 229, 255, 0.15), rgba(0, 229, 255, 0.05)); border-color: rgba(0, 229, 255, 0.3); }
+        .highlight-stat .stat-val { font-size: 42px; color: #fff; text-shadow: 0 0 10px rgba(0,229,255,0.5); }
+
+        /* =========================================
+           5. FINAL ROSTER BOARD STYLES
+        ========================================= */
+        #roster-board {
+            width: 1100px; padding: 40px; display: flex; flex-direction: column; align-items: center;
+            background: linear-gradient(180deg, rgba(14, 20, 35, 0.95), rgba(7, 10, 18, 0.98));
+            border: 2px solid #00e5ff; border-radius: 24px; box-shadow: 0 0 60px rgba(0, 229, 255, 0.2);
+            transition: border-color 0.5s, box-shadow 0.5s;
+        }
+        #roster-league-title { font-size: 48px; margin: 0 0 30px 0; font-weight: 900; text-transform: uppercase; letter-spacing: 5px; text-shadow: 0 5px 15px rgba(0,0,0,0.8); }
+        
+        .roster-columns { display: flex; justify-content: space-between; width: 100%; }
+        .team-col { width: 48%; }
+        
+        .team-header { display: flex; justify-content: center; align-items: center; gap: 15px; padding-bottom: 15px; border-bottom: 3px solid #00e5ff; margin-bottom: 15px; }
+        .team-header h2 { margin: 0; padding: 0; font-size: 36px; text-transform: uppercase; letter-spacing: 2px; color: #fff; text-shadow: 0 0 10px rgba(0,229,255,0.5); border: none; }
+        .team-header img { width: 50px; height: 50px; object-fit: contain; filter: drop-shadow(0 5px 10px rgba(0,0,0,0.5)); }
+        
+        .team-orange .team-header { border-bottom-color: #ff6d00; }
+        .team-orange .team-header h2 { text-shadow: 0 0 10px rgba(255,109,0,0.5); }
+
+        .roster-section-title { font-size: 14px; font-weight: 900; color: rgba(255,255,255,0.5); letter-spacing: 4px; text-align: center; margin: 10px 0 5px 0; text-transform: uppercase; }
+
+        .roster-list { display: flex; flex-direction: column; gap: 8px; }
+        
+        .roster-player { display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.03); padding: 8px 15px; border-radius: 8px; font-size: 22px; font-weight: bold; border-left: 4px solid #00e5ff; }
+        .roster-league { font-size: 16px; color: #8c9eff; }
+        
+        .team-orange .roster-player { border-color: #ff6d00; }
+        .team-orange .roster-league { color: #ffad66; }
+
+        /* =========================================
+           6. FREESTYLE COMPETITION BOARD
+        ========================================= */
+        #freestyle-board {
+            width: 1200px; padding: 40px; display: flex; flex-direction: column; align-items: center;
+            background: linear-gradient(180deg, rgba(14, 20, 35, 0.95), rgba(7, 10, 18, 0.98));
+            border: 2px solid #00e5ff; border-radius: 24px; box-shadow: 0 0 60px rgba(0, 229, 255, 0.2);
+            transition: border-color 0.5s, box-shadow 0.5s;
+        }
+        #freestyle-league-title { font-size: 48px; margin: 0 0 30px 0; font-weight: 900; text-transform: uppercase; letter-spacing: 5px; text-shadow: 0 5px 15px rgba(0,0,0,0.8); }
+        .freestyle-grid { display: flex; gap: 20px; justify-content: center; width: 100%; }
+        .freestyle-card {
+            width: 260px; height: 440px;
+            background: rgba(255,255,255,0.03); border: 2px solid rgba(255,255,255,0.1);
+            border-radius: 16px; display: flex; flex-direction: column; align-items: center;
+            position: relative; overflow: hidden; transform-style: preserve-3d;
+        }
+        .fs-model-container { height: 210px; width: 100%; display: flex; justify-content: center; align-items: flex-end; background: rgba(0,0,0,0.4); border-bottom: 2px solid rgba(255,255,255,0.1); overflow: hidden; }
+        .fs-model { height: 95%; object-fit: contain; filter: drop-shadow(5px 5px 10px rgba(0,0,0,0.8)); transform: scale(1.1); transform-origin: bottom center; }
+        .fs-logo { position: absolute; top: 10px; right: 10px; width: 50px; height: 50px; object-fit: contain; filter: drop-shadow(0 2px 5px rgba(0,0,0,0.5)); z-index: 10; }
+        .fs-info { padding: 15px; width: 100%; box-sizing: border-box; text-align: center; display: flex; flex-direction: column; gap: 8px;}
+        .fs-name { font-size: 24px; font-weight: 900; text-transform: uppercase; margin: 0 0 5px 0; text-shadow: 0 2px 5px rgba(0,0,0,0.8); line-height: 1; white-space: nowrap;}
+        .fs-stat { background: rgba(0,0,0,0.3); padding: 8px; border-radius: 8px; display: flex; flex-direction: column; border: 1px solid rgba(255,255,255,0.05);}
+        .fs-stat-label { font-size: 10px; color: #aaa; letter-spacing: 1px; text-transform: uppercase; font-weight: bold; }
+        .fs-stat-value { font-size: 18px; font-weight: 900; color: #fff; }
+        
+        .fs-champ-badge {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: linear-gradient(90deg, #FFD700, #D4AF37);
+            color: #000;
+            font-size: 10px;
+            font-weight: 900;
+            text-transform: uppercase;
+            padding: 4px 8px;
+            border-radius: 4px;
+            z-index: 20;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.8);
+            letter-spacing: 1px;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="stinger-container">
+        <div class="curtain-accent"></div>
+        <div class="curtain-main">
+            <div class="texture-overlay"></div>
+        </div>
+        <div class="impact-flash"></div>
+        <div id="logo-wrapper">
+            <div class="center-glow"></div>
+            <div class="tech-ring"></div>
+            <div class="tech-ring-inner"></div>
+            <img id="logo-img" src="" alt="Stinger Logo">
+        </div>
+    </div>
+
+    <div id="team-stinger-container">
+        <div id="ts-accent" class="ts-panel-accent"></div>
+        <div id="ts-main" class="ts-panel-main">
+            <div class="ts-speed-lines"></div>
+            <div class="ts-chevron"></div>
+        </div>
+        <div id="ts-logo-container">
+            <img id="ts-logo-img" src="" alt="Team Logo">
+        </div>
+    </div>
+
+    <div id="intro-graphic" class="showcase-element show">
+        <div class="float-wrapper">
+            <h1 class="intro-title">
+                <span class="title-top">Clutch Competitor Series</span>
+                <span class="title-bottom">Season V All Star Reveals</span>
+            </h1>
+        </div>
+    </div>
+
+    <div id="matchup-slide" class="showcase-element hidden-right">
+        <div class="float-wrapper">
+            <div id="matchup-master-box">
+                <div class="league-logo-box">
+                    <img id="matchup-league-img" src="" alt="League Logo">
+                </div>
+                <div class="matchup-row">
+                    <div class="side-group team-american">
+                        <img src="logos/american.png" alt="American" class="flag-img">
+                        <div class="side-text">American</div>
+                    </div>
+                    <div class="vs-text">vs</div>
+                    <div class="side-group team-international">
+                        <img src="logos/international.png" alt="International" class="flag-img">
+                        <div class="side-text">International</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="division-intro-slide" class="showcase-element hidden-right">
+        <div class="float-wrapper">
+            <div id="division-master-box">
+                <img id="division-logo-img" src="" alt="Division Logo">
+                <div class="division-text" id="division-text-content"></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="master-controller" class="showcase-element hidden-right">
+        <div class="float-wrapper">
+            <div class="player-showcase-box" id="pc-master-box">
+                <div class="model-side">
+                    <img id="pc-model-img" src="" alt="Player Model">
+                </div>
+                <div class="info-side">
+                    <div class="info-header">
+                        <div class="name-badge-group">
+                            <h2 id="pc-name">Player Name</h2>
+                            <div class="badge-row">
+                                <div id="pc-status">STARTER</div>
+                                <div id="pc-selections" class="selections-badge">First Appearance</div>
+                            </div>
+                        </div>
+                        <img id="pc-team-logo" src="" alt="Team Logo">
+                    </div>
+                    <div class="stats-grid">
+                        <div class="stat-box">
+                            <div class="stat-label">SERIES PLAYED</div>
+                            <div class="stat-val" id="pc-sp">0</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-label">MVPR</div>
+                            <div class="stat-val" id="pc-mvpr">0.00</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-label">AVG SCORE</div>
+                            <div class="stat-val" id="pc-score">0</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-label">GPG</div>
+                            <div class="stat-val" id="pc-gpg">0.00</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-label">APG</div>
+                            <div class="stat-val" id="pc-apg">0.00</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-label">SVPG</div>
+                            <div class="stat-val" id="pc-svpg">0.00</div>
+                        </div>
+                        <div class="stat-box highlight-stat" id="pc-highlight-box">
+                            <div class="stat-label">PERCENTAGE OF VOTES</div>
+                            <div class="stat-val" id="pc-votes">0%</div>
+                        </div>
+                    </div>
+                    
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="roster-board" class="showcase-element hidden-right">
+        <h1 id="roster-league-title">LEAGUE ROSTER</h1>
+        <div class="roster-columns">
+            <div class="team-col team-blue">
+                <div class="team-header">
+                    <h2>AMERICAN</h2>
+                    <img src="logos/american.png" alt="American">
+                </div>
+                <div class="roster-list" id="team-blue-list"></div>
+            </div>
+            <div class="team-col team-orange">
+                <div class="team-header">
+                    <h2>INTERNATIONAL</h2>
+                    <img src="logos/international.png" alt="International">
+                </div>
+                <div class="roster-list" id="team-orange-list"></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="freestyle-intro-slide" class="showcase-element hidden-right">
+        <div class="float-wrapper">
+            <div id="freestyle-intro-master-box">
+                <img id="freestyle-intro-logo-img" src="" alt="League Logo">
+                <div class="freestyle-intro-text" id="freestyle-intro-text-content"></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="freestyle-board" class="showcase-element hidden-right">
+        <h1 id="freestyle-league-title">LEAGUE FREESTYLE COMPETITORS</h1>
+        <div class="freestyle-grid" id="freestyle-cards-container">
+            </div>
+    </div>
+
+    <script>
+        // --- DATA DICTIONARIES ---
+        const C = {
+            Black: "#1a1a1a", Gold: "#D4AF37", Blue: "#0074D9", White: "#F0F0F0", 
+            Red: "#D60000", Orange: "#FF851B", Grey: "#AAAAAA", Purple: "#B10DC9", 
+            Pink: "#FF1493", Navy: "#001f3f", Brown: "#8B4513", Green: "#2ECC40", 
+            Tan: "#D2B48C", Teal: "#39CCCC", DarkGrey: "#333333", Yellow: "#FFDC00"
+        };
+
+        const stingerConfigs = {
+            'CCS': { file: 'CCS.png', main: '#363636', accent: '#D4AF37' },
+            'CPL': { file: 'CPL.png', main: '#363636', accent: '#FF8000' },
+            'CAS': { file: 'CAS.png', main: '#000000', accent: '#D60000' },
+            'CNL': { file: 'CNL.png', main: '#000000', accent: '#0074D9' },
+            'American': { file: 'american.png', main: '#001a33', accent: '#00e5ff' },
+            'International': { file: 'international.png', main: '#261000', accent: '#ff6d00' }
+        };
+
+        const teamConfigs = {
+            // CCS
+            "Ninjas": { file: "Ninjas.png", p: C.Black, s: C.Gold },
+            "Shockwave": { file: "Shockwave.png", p: C.Blue, s: C.White },
+            "Samurai": { file: "Samurai.png", p: C.Red, s: C.Black },
+            "Zebras": { file: "Zebras.png", p: C.White, s: C.Black },
+            "Blasters": { file: "Blasters.png", p: C.Orange, s: C.Grey },
+            "Stars": { file: "Stars.png", p: C.Purple, s: C.White },
+            "Howlers": { file: "Howlers.png", p: C.Pink, s: C.Grey },
+            "Vipers": { file: "Vipers.png", p: C.Yellow, s: C.Navy },
+            "Pirates": { file: "Pirates.png", p: C.Brown, s: C.White },
+            "Flyers": { file: "Flyers.png", p: C.Green, s: C.White },
+            "Moose": { file: "Moose.png", p: C.Tan, s: "#4c5757" },
+            "Anglers": { file: "Anglers.png", p: C.Teal, s: C.DarkGrey },
+            // CPL
+            "Cobras": { file: "Cobras.png", p: C.Yellow, s: C.Black },
+            "Groundhogs": { file: "Groundhogs.png", p: C.Tan, s: C.White },
+            "Mortars": { file: "Mortars.png", p: C.Orange, s: C.Black },
+            "Shadows": { file: "Shadows.png", p: C.Black, s: C.Gold },
+            "Lory": { file: "Lory.png", p: C.Green, s: C.Red },
+            "SonicBoom": { file: "SonicBoom.png", p: C.Blue, s: C.White },
+            "Buffalo": { file: "Buffalo.png", p: C.White, s: C.Brown },
+            "Warriors": { file: "Warriors.png", p: C.Red, s: C.Black },
+            "Coyotes": { file: "Coyotes.png", p: C.Pink, s: C.Grey },
+            "Supernova": { file: "Supernova.png", p: C.Purple, s: C.Black },
+            "Marauders": { file: "Marauders.png", p: C.Brown, s: C.White },
+            "Fishermen": { file: "Fishermen.png", p: C.Teal, s: C.Orange },
+            // CAS
+            "Prowlers": { file: "Prowlers.png", p: C.Black, s: C.Gold },
+            "BlackBears": { file: "BlackBears.png", p: C.Tan, s: C.Black },
+            "Cannons": { file: "Cannons.png", p: C.Orange, s: C.Grey },
+            "Skyhawks": { file: "Skyhawks.png", p: "#67ce00", s: "#8abeac" },
+            "Behemoths": { file: "Behemoths.png", p: C.Teal, s: C.White },
+            "Copperheads": { file: "Copperheads.png", p: C.Yellow, s: C.Blue },
+            "Elephants": { file: "Elephants.png", p: C.White, s: C.Grey },
+            "Wolfpack": { file: "Wolfpack.png", p: C.Pink, s: C.Black },
+            "Conquerors": { file: "Conquerors.png", p: C.Brown, s: C.White },
+            "Astronauts": { file: "Astronauts.png", p: C.Purple, s: C.White },
+            "Surge": { file: "Surge.png", p: C.Blue, s: C.White },
+            "Shaman": { file: "Shaman.png", p: C.Red, s: C.Black },
+            // CNL
+            "Thieves": { file: "Thieves.png", p: C.Black, s: C.Gold },
+            "Sound": { file: "Sound.png", p: C.Blue, s: C.White },
+            "Bushido": { file: "Bushido.png", p: C.Red, s: C.Black },
+            "Rhinos": { file: "Rhinos.png", p: C.White, s: C.Black },
+            "Ballistics": { file: "Ballistics.png", p: C.Orange, s: C.Grey },
+            "Rovers": { file: "Rovers.png", p: C.Purple, s: C.Black },
+            "Timberwolves": { file: "Timberwolves.png", p: C.Pink, s: C.Navy },
+            "Anacondas": { file: "Anacondas.png", p: C.Yellow, s: C.Navy },
+            "Shipwreck": { file: "Shipwreck.png", p: C.Brown, s: C.Black },
+            "Redwings": { file: "Redwings.png", p: C.Green, s: C.Red },
+            "Ducks": { file: "Ducks.png", p: C.Tan, s: C.Black },
+            "Leviathans": { file: "Leviathans.png", p: C.Teal, s: C.Blue }
+        };
+
+        const allStars = [
+            // CCS American Division (Blue)
+            { name: "Jerid", team: "Moose", league: "CCS", allStarTeam: "Blue" },
+            { name: "Blezzy", team: "Blasters", league: "CCS", allStarTeam: "Blue" },
+            { name: "Eli", team: "Pirates", league: "CCS", allStarTeam: "Blue" },
+            { name: "Cristian", team: "Blasters", league: "CCS", allStarTeam: "Blue" },
+            { name: "Rac1n", team: "Stars", league: "CCS", allStarTeam: "Blue" },
+            { name: "Dxge", team: "Pirates", league: "CCS", allStarTeam: "Blue" },
+            // CCS International Division (Orange)
+            { name: "Dyloh", team: "Zebras", league: "CCS", allStarTeam: "Orange" },
+            { name: "Oofy", team: "Flyers", league: "CCS", allStarTeam: "Orange" },
+            { name: "DainBramage", team: "Zebras", league: "CCS", allStarTeam: "Orange" },
+            { name: "Woerq", team: "Vipers", league: "CCS", allStarTeam: "Orange" },
+            { name: "Wrld", team: "Anglers", league: "CCS", allStarTeam: "Orange" },
+            { name: "Tomato", team: "Vipers", league: "CCS", allStarTeam: "Orange" },
+
+            // CPL American Division (Blue)
+            { name: "Decaf", team: "Mortars", league: "CPL", allStarTeam: "Blue" },
+            { name: "Slykooper", team: "Marauders", league: "CPL", allStarTeam: "Blue" },
+            { name: "Buddy", team: "Groundhogs", league: "CPL", allStarTeam: "Blue" },
+            { name: "BamBam", team: "Supernova", league: "CPL", allStarTeam: "Blue" },
+            { name: "Moon", team: "Supernova", league: "CPL", allStarTeam: "Blue" },
+            { name: "Haz", team: "Mortars", league: "CPL", allStarTeam: "Blue" },
+            // CPL International Division (Orange)
+            { name: "Panda", team: "Cobras", league: "CPL", allStarTeam: "Orange" },
+            { name: "Guccianii", team: "Warriors", league: "CPL", allStarTeam: "Orange" },
+            { name: "Landon", team: "Buffalo", league: "CPL", allStarTeam: "Orange" },
+            { name: "Kaza", team: "Fishermen", league: "CPL", allStarTeam: "Orange" },
+            { name: "HogdoBogdo", team: "Warriors", league: "CPL", allStarTeam: "Orange" },
+            { name: "Meepomic", team: "Lory", league: "CPL", allStarTeam: "Orange" },
+
+            // CAS American Division (Blue)
+            { name: "BluePhoenix", team: "Coyotes", league: "CAS", allStarTeam: "Blue" },
+            { name: "Pax", team: "BlackBears", league: "CAS", allStarTeam: "Blue" },
+            { name: "Prod", team: "Cannons", league: "CAS", allStarTeam: "Blue" },
+            { name: "Aiden", team: "BlackBears", league: "CAS", allStarTeam: "Blue" },
+            { name: "Sports", team: "Surge", league: "CAS", allStarTeam: "Blue" },
+            { name: "Gray", team: "Coyotes", league: "CAS", allStarTeam: "Blue" },
+            // CAS International Division (Orange)
+            { name: "Ren", team: "Copperheads", league: "CAS", allStarTeam: "Orange" },
+            { name: "Bankai", team: "Prowlers", league: "CAS", allStarTeam: "Orange" },
+            { name: "An7iix", team: "Shaman", league: "CAS", allStarTeam: "Orange" },
+            { name: "Slayer2k", team: "Copperheads", league: "CAS", allStarTeam: "Orange" },
+            { name: "Botco", team: "Skyhawks", league: "CAS", allStarTeam: "Orange" },
+            { name: "Dr Scrawny", team: "Elephants", league: "CAS", allStarTeam: "Orange" },
+
+            // CNL American Division (Blue)
+            { name: "Deplooped", team: "Ducks", league: "CNL", allStarTeam: "Blue" },
+            { name: "FireNinja", team: "Ballistics", league: "CNL", allStarTeam: "Blue" },
+            { name: "Ransome", team: "Rovers", league: "CNL", allStarTeam: "Blue" },
+            { name: "Yovanny", team: "Sound", league: "CNL", allStarTeam: "Blue" },
+            { name: "TazzyMike", team: "Ducks", league: "CNL", allStarTeam: "Blue" },
+            { name: "Pluooh", team: "Timberwolves", league: "CNL", allStarTeam: "Blue" },
+            // CNL International Division (Orange)
+            { name: "Terbiee", team: "Anacondas", league: "CNL", allStarTeam: "Orange" },
+            { name: "Striker", team: "Redwings", league: "CNL", allStarTeam: "Orange" },
+            { name: "Ghoulze", team: "Bushido", league: "CNL", allStarTeam: "Orange" },
+            { name: "Nava", team: "Anacondas", league: "CNL", allStarTeam: "Orange" },
+            { name: "Kazegurui", team: "Bushido", league: "CNL", allStarTeam: "Orange" },
+            { name: "Carsxnn", team: "Leviathans", league: "CNL", allStarTeam: "Orange" }
+        ];
+
+        // Freestyle competitors per league with defending champs tagged.
+        const freestylers = [
+            // CCS
+            { name: "Mini", team: "Howlers", league: "CCS", isDefendingChamp: true },
+            { name: "Eli", team: "Pirates", league: "CCS" },
+            { name: "Oofy", team: "Flyers", league: "CCS" },
+            { name: "Cyan", team: "Ninjas", league: "CCS" },
+            // CPL
+            { name: "Lapis", team: "SonicBoom", league: "CPL", isDefendingChamp: true },
+            { name: "BamBam", team: "Supernova", league: "CPL" },
+            { name: "Ink", team: "Shadows", league: "CPL" },
+            { name: "Cjayy", team: "Shadows", league: "CPL" },
+            // CAS
+            { name: "Gray", team: "Wolfpack", league: "CAS" },
+            { name: "DsyrJames", team: "Conquerors", league: "CAS" },
+            { name: "An7iix", team: "Shaman", league: "CAS" },
+            { name: "Tor", team: "Shaman", league: "CAS" },
+            // CNL
+            { name: "Deplooped", team: "Ducks", league: "CNL" },
+            { name: "TazzyMike", team: "Ducks", league: "CNL" },
+            { name: "Rizada", team: "Anacondas", league: "CNL" },
+            { name: "Killer", team: "Redwings", league: "CNL" }
+        ];
+
+        // =========================================
+        // TIMELINE ENGINE & DATA FETCHING
+        // =========================================
+        const timeline = [];
+        let currentIndex = 0; 
+        let isAnimating = false;
+
+        async function initBroadcast() {
+            try {
+                const sheetUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ_1kLIy2noymz_4w0PepfaQMzezraS4pcRerX1Vy_eNXZK_Hb_le5ccEzVmiMDwBWd3j7t5_wETP1h/pub?output=csv";
+                const response = await fetch(sheetUrl);
+                const csvData = await response.text();
+                
+                const rows = csvData.split(/\r?\n/);
+                
+                for (let i = 1; i < rows.length; i++) {
+                    const cols = rows[i].split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/).map(c => c.replace(/^"|"$/g, '').trim());
+                    
+                    if (cols.length > 0 && cols[0]) {
+                        const playerName = cols[0];
+                        
+                        // Parse All Stars Data
+                        const playerObj = allStars.find(p => p.name.toLowerCase() === playerName.toLowerCase());
+                        if (playerObj) {
+                            playerObj.seriesPlayed = cols[2] || "0";
+                            playerObj.mvpr = cols[4] || "0.00";
+                            playerObj.avgScore = cols[6] || "0";
+                            playerObj.gpg = cols[8] || "0.00";
+                            playerObj.apg = cols[10] || "0.00";
+                            playerObj.svpg = cols[12] || "0.00";
+                            
+                            let pct = cols[13] || "0";
+                            if (!pct.includes('%')) {
+                                const numVal = parseFloat(pct);
+                                pct = (!isNaN(numVal) && numVal < 1) ? (numVal * 100).toFixed(1) + '%' : pct + '%';
+                            }
+                            playerObj.votePercent = pct;
+                            playerObj.selections = cols[14] || "1";
+                        }
+
+                        // Parse Freestyle Data (Cols P and Q)
+                        const fsObj = freestylers.find(p => p.name.toLowerCase() === playerName.toLowerCase());
+                        if (fsObj) {
+                            fsObj.fsApps = cols[15] || "1"; // Col P
+                            fsObj.fsTitles = cols[16] || "0"; // Col Q
+                        }
+                    }
+                }
+            } catch (err) {
+                console.error("Failed to load Google Sheet data:", err);
+            }
+
+            allStars.forEach(p => {
+                if (p.seriesPlayed === undefined) {
+                    p.seriesPlayed = "-"; p.mvpr = "-"; p.avgScore = "-";
+                    p.gpg = "-"; p.apg = "-"; p.svpg = "-"; p.votePercent = "-"; p.selections = "-";
+                }
+            });
+
+            freestylers.forEach(p => {
+                if (p.fsApps === undefined) {
+                    p.fsApps = "-"; p.fsTitles = "-";
+                }
+            });
+
+            buildTimeline();
+        }
+
+        function buildTimeline() {
+            timeline.push({ type: 'intro', el: ui.intro });
+
+            const leaguesOrder = ['CCS', 'CPL', 'CAS', 'CNL'];
+            
+            leaguesOrder.forEach(league => {
+                const bluePlayers = allStars.filter(p => p.league === league && p.allStarTeam === 'Blue');
+                const orangePlayers = allStars.filter(p => p.league === league && p.allStarTeam === 'Orange');
+                
+                if (bluePlayers.length > 0 || orangePlayers.length > 0) {
+                    timeline.push({ type: 'matchup', league: league, stinger: league, el: ui.matchup });
+                    
+                    if (bluePlayers.length > 0) {
+                        timeline.push({ type: 'division-intro', league: league, division: 'American', stinger: 'American', el: ui.divisionIntro });
+                        bluePlayers.forEach((player, index) => {
+                            player.isStarter = index < 3; 
+                            timeline.push({ type: 'player', data: player, teamStinger: player.team, el: ui.controller });
+                        });
+                    }
+
+                    if (orangePlayers.length > 0) {
+                        timeline.push({ type: 'division-intro', league: league, division: 'International', stinger: 'International', el: ui.divisionIntro });
+                        orangePlayers.forEach((player, index) => {
+                            player.isStarter = index < 3; 
+                            timeline.push({ type: 'player', data: player, teamStinger: player.team, el: ui.controller });
+                        });
+                    }
+                    
+                    // Add Roster Board with a League Stinger Transition
+                    timeline.push({ type: 'roster', league: league, stinger: league, el: ui.rosterBoard });
+
+                    // Add Freestyle Intro Slide with League Stinger
+                    timeline.push({ type: 'freestyle-intro', league: league, stinger: league, el: ui.freestyleIntro });
+                    
+                    // Add Freestyle Board with League Stinger Transition
+                    timeline.push({ type: 'freestyle', league: league, stinger: league, el: ui.freestyleBoard });
+                }
+            });
+        }
+
+        initBroadcast();
+
+        // --- DOM ELEMENTS ---
+        const ui = {
+            stingerContainer: document.getElementById('stinger-container'),
+            stingerLogo: document.getElementById('logo-img'),
+            teamStingerContainer: document.getElementById('team-stinger-container'),
+            tsAccent: document.getElementById('ts-accent'),
+            tsMain: document.getElementById('ts-main'),
+            tsContainer: document.getElementById('ts-logo-container'),
+            tsLogo: document.getElementById('ts-logo-img'),
+            intro: document.getElementById('intro-graphic'),
+            matchup: document.getElementById('matchup-slide'),
+            matchupLogo: document.getElementById('matchup-league-img'),
+            matchupBox: document.getElementById('matchup-master-box'),
+            divisionIntro: document.getElementById('division-intro-slide'),
+            divBox: document.getElementById('division-master-box'),
+            divLogo: document.getElementById('division-logo-img'),
+            divText: document.getElementById('division-text-content'),
+            
+            controller: document.getElementById('master-controller'),
+            pcMasterBox: document.getElementById('pc-master-box'),
+            pcModelImg: document.getElementById('pc-model-img'),
+            pcName: document.getElementById('pc-name'),
+            pcStatus: document.getElementById('pc-status'),
+            pcTeamLogo: document.getElementById('pc-team-logo'),
+            pcSp: document.getElementById('pc-sp'),
+            pcMvpr: document.getElementById('pc-mvpr'),
+            pcScore: document.getElementById('pc-score'),
+            pcGpg: document.getElementById('pc-gpg'),
+            pcApg: document.getElementById('pc-apg'),
+            pcSvpg: document.getElementById('pc-svpg'),
+            pcVotes: document.getElementById('pc-votes'),
+            pcHighlightBox: document.getElementById('pc-highlight-box'),
+            pcSelections: document.getElementById('pc-selections'),
+
+            rosterBoard: document.getElementById('roster-board'),
+            rosterTitle: document.getElementById('roster-league-title'),
+            blueList: document.getElementById('team-blue-list'),
+            orangeList: document.getElementById('team-orange-list'),
+
+            freestyleIntro: document.getElementById('freestyle-intro-slide'),
+            fsIntroBox: document.getElementById('freestyle-intro-master-box'),
+            fsIntroLogo: document.getElementById('freestyle-intro-logo-img'),
+            fsIntroText: document.getElementById('freestyle-intro-text-content'),
+
+            freestyleBoard: document.getElementById('freestyle-board'),
+            freestyleTitle: document.getElementById('freestyle-league-title'),
+            freestyleContainer: document.getElementById('freestyle-cards-container')
+        };
+
+        // =========================================
+        // DATA PREPARATION
+        // =========================================
+        function prepareElementData(state) {
+            if (state.type === 'matchup') {
+                const config = stingerConfigs[state.league];
+                ui.matchupLogo.src = `logos/${config.file}`;
+                ui.matchupBox.style.borderColor = config.accent;
+                document.documentElement.style.setProperty('--accent-color', config.accent);
+            } 
+            else if (state.type === 'division-intro') {
+                const isAmerican = state.division === 'American';
+                const color = isAmerican ? '#00e5ff' : '#ff6d00';
+                
+                ui.divLogo.src = isAmerican ? 'logos/american.png' : 'logos/international.png';
+                ui.divBox.style.borderColor = color;
+                ui.divText.innerHTML = `NOW REVEALING<br><span style="color:${color}; font-size: 56px;">${state.league} ${state.division}</span><br>DIVISION ALL STARS`;
+            }
+            else if (state.type === 'player') {
+                const p = state.data;
+                const isBlue = p.allStarTeam === 'Blue';
+                const divColor = isBlue ? '#00e5ff' : '#ff6d00';
+                const divBg = isBlue ? 'rgba(0, 229, 255, 0.2)' : 'rgba(255, 109, 0, 0.2)';
+                const divHighlightBg = isBlue ? 'linear-gradient(90deg, rgba(0, 229, 255, 0.05), rgba(0, 229, 255, 0.15), rgba(0, 229, 255, 0.05))' : 'linear-gradient(90deg, rgba(255, 109, 0, 0.05), rgba(255, 109, 0, 0.15), rgba(255, 109, 0, 0.05))';
+                
+                ui.pcName.textContent = p.name;
+                ui.pcStatus.textContent = p.isStarter ? "STARTER" : "RESERVE";
+                
+                ui.pcTeamLogo.src = `teamlogos/${teamConfigs[p.team].file}`;
+                ui.pcModelImg.src = `models/${p.team}model.png`;
+
+                ui.pcSp.textContent = p.seriesPlayed;
+                ui.pcMvpr.textContent = p.mvpr;
+                ui.pcScore.textContent = p.avgScore;
+                ui.pcGpg.textContent = p.gpg;
+                ui.pcApg.textContent = p.apg;
+                ui.pcSvpg.textContent = p.svpg;
+                ui.pcVotes.textContent = p.votePercent;
+                ui.pcSelections.textContent = p.selections;
+
+                ui.pcMasterBox.style.borderColor = divColor;
+                ui.pcName.style.textShadow = `0 5px 15px ${divColor}80`; 
+                ui.pcStatus.style.borderColor = divColor;
+                ui.pcStatus.style.background = divBg;
+                
+                ui.pcHighlightBox.style.background = divHighlightBg;
+                ui.pcHighlightBox.style.borderColor = `${divColor}4D`; 
+                ui.pcVotes.style.textShadow = `0 0 10px ${divColor}80`;
+                
+                ui.pcSelections.style.background = divBg;
+                ui.pcSelections.style.borderColor = divColor;
+                ui.pcSelections.style.textShadow = `0 0 10px ${divColor}80`;
+            } 
+            else if (state.type === 'roster') {
+                const config = stingerConfigs[state.league];
+                ui.rosterTitle.textContent = `${state.league} ALL-STARS`;
+                ui.rosterTitle.style.color = config.accent;
+                ui.rosterBoard.style.borderColor = config.accent;
+                
+                const leaguePlayers = allStars.filter(p => p.league === state.league);
+                const bluePlayers = leaguePlayers.filter(p => p.allStarTeam === 'Blue');
+                const orangePlayers = leaguePlayers.filter(p => p.allStarTeam === 'Orange');
+
+                const buildHtml = (players) => {
+                    let html = '';
+                    if(players.length > 0) {
+                        html += '<div class="roster-section-title">Starters</div>';
+                    }
+                    players.forEach((p, i) => {
+                        if(i === 3) {
+                            html += '<div class="roster-section-title" style="margin-top: 15px;">Reserves</div>';
+                        }
+                        html += `<div class="roster-player">${p.name} <span class="roster-league">${p.team}</span></div>`;
+                    });
+                    return html;
+                };
+
+                ui.blueList.innerHTML = buildHtml(bluePlayers);
+                ui.orangeList.innerHTML = buildHtml(orangePlayers);
+            }
+            else if (state.type === 'freestyle-intro') {
+                const config = stingerConfigs[state.league];
+                ui.fsIntroLogo.src = `logos/${config.file}`;
+                ui.fsIntroBox.style.borderColor = config.accent;
+                ui.fsIntroText.innerHTML = `NOW REVEALING<br><span style="color:${config.accent}; font-size: 56px;">${state.league}</span><br>FREESTYLE COMPETITORS`;
+            }
+            else if (state.type === 'freestyle') {
+                const config = stingerConfigs[state.league];
+                ui.freestyleTitle.textContent = `${state.league} FREESTYLE COMPETITORS`;
+                ui.freestyleTitle.style.color = config.accent;
+                ui.freestyleBoard.style.borderColor = config.accent;
+
+                const leagueFreestylers = freestylers.filter(p => p.league === state.league);
+                let html = '';
+                
+                leagueFreestylers.forEach(p => {
+                    const teamConf = teamConfigs[p.team];
+                    const accentColor = teamConf ? teamConf.s : '#ffffff';
+                    const logoFile = teamConf ? teamConf.file : '';
+                    const champBadge = p.isDefendingChamp ? '<div class="fs-champ-badge">Defending Champ</div>' : '';
+                    
+                    html += `
+                    <div class="freestyle-card" style="border-color: ${accentColor};">
+                        ${champBadge}
+                        <img src="teamlogos/${logoFile}" class="fs-logo" alt="logo">
+                        <div class="fs-model-container">
+                            <img src="models/${p.team}model.png" class="fs-model" alt="model">
+                        </div>
+                        <div class="fs-info">
+                            <h3 class="fs-name" style="color: ${accentColor}">${p.name}</h3>
+                            <div class="fs-stat">
+                                <span class="fs-stat-label">Freestyle Appearances</span>
+                                <span class="fs-stat-value">${p.fsApps}</span>
+                            </div>
+                            <div class="fs-stat">
+                                <span class="fs-stat-label">Freestyle Titles</span>
+                                <span class="fs-stat-value">${p.fsTitles}</span>
+                            </div>
+                        </div>
+                    </div>
+                    `;
+                });
+                
+                ui.freestyleContainer.innerHTML = html;
+            }
+        }
+
+        // =========================================
+        // NAVIGATION LOGIC
+        // =========================================
+        const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
+        async function transitionToNext() {
+            if (isAnimating || timeline.length === 0 || currentIndex >= timeline.length - 1) return;
+            isAnimating = true;
+
+            const currentState = timeline[currentIndex];
+            const nextState = timeline[currentIndex + 1];
+
+            if (nextState.stinger) {
+                await runStingerSequence(nextState.stinger, currentState.el, nextState.el, () => {
+                    prepareElementData(nextState);
+                });
+            } 
+            else if (nextState.teamStinger) {
+                await runTeamStingerSequence(nextState.teamStinger, currentState.el, nextState.el, () => {
+                    prepareElementData(nextState);
+                });
+            } 
+            else {
+                await slideBetweenElements(currentState.el, nextState.el, 'left', () => {
+                    prepareElementData(nextState);
+                });
+            }
+
+            currentIndex++;
+            isAnimating = false;
+        }
+
+        async function transitionToPrev() {
+            if (isAnimating || timeline.length === 0 || currentIndex <= 0) return;
+            isAnimating = true;
+
+            const currentState = timeline[currentIndex];
+            const prevState = timeline[currentIndex - 1];
+
+            await slideBetweenElements(currentState.el, prevState.el, 'right', () => {
+                prepareElementData(prevState);
+            });
+
+            currentIndex--;
+            isAnimating = false;
+        }
+
+        // =========================================
+        // ANIMATION RUNNERS
+        // =========================================
+        
+        async function runStingerSequence(stingerId, exitElement, enterElement, updateDataFn) {
+            const config = stingerConfigs[stingerId]; 
+            
+            document.documentElement.style.setProperty('--main-bg', config.main);
+            document.documentElement.style.setProperty('--accent-color', config.accent);
+            ui.stingerLogo.src = `logos/${config.file}`;
+
+            ui.stingerContainer.classList.remove('play');
+            void ui.stingerContainer.offsetWidth; 
+            ui.stingerContainer.classList.add('play');
+            
+            await sleep(1000); 
+
+            exitElement.classList.remove('show');
+            exitElement.classList.add('hidden-left'); 
+            if (updateDataFn) updateDataFn(); 
+
+            enterElement.style.transition = 'none';
+            enterElement.classList.remove('hidden-left', 'hidden-right');
+            enterElement.classList.add('show');
+            void enterElement.offsetWidth; 
+            enterElement.style.transition = ''; 
+
+            await sleep(1400); 
+            ui.stingerContainer.classList.remove('play');
+        }
+
+        async function runTeamStingerSequence(teamName, exitElement, enterElement, updateDataFn) {
+            const config = teamConfigs[teamName]; 
+            if (!config) { console.error("Team config missing for: " + teamName); return; }
+
+            document.documentElement.style.setProperty('--ts-primary', config.p);
+            document.documentElement.style.setProperty('--ts-secondary', config.s);
+            ui.tsLogo.src = `teamlogos/${config.file}`;
+
+            ui.teamStingerContainer.classList.add('play');
+            ui.tsAccent.classList.remove('run-ts-accent');
+            ui.tsMain.classList.remove('run-ts-main');
+            ui.tsContainer.classList.remove('run-ts-container');
+            ui.tsLogo.classList.remove('run-ts-logo');
+            void ui.tsAccent.offsetWidth; 
+
+            ui.tsAccent.classList.add('run-ts-accent');
+            ui.tsMain.classList.add('run-ts-main');
+            ui.tsContainer.classList.add('run-ts-container');
+            ui.tsLogo.classList.add('run-ts-logo');
+
+            await sleep(850); 
+
+            exitElement.classList.remove('show');
+            exitElement.classList.add('hidden-left'); 
+            if (updateDataFn) updateDataFn(); 
+
+            enterElement.style.transition = 'none';
+            enterElement.classList.remove('hidden-left', 'hidden-right');
+            enterElement.classList.add('show');
+            void enterElement.offsetWidth; 
+            enterElement.style.transition = ''; 
+
+            await sleep(1000); 
+            ui.teamStingerContainer.classList.remove('play');
+        }
+
+        async function slideBetweenElements(exitElement, enterElement, direction, updateDataFn) {
+            const outClass = direction === 'left' ? 'hidden-left' : 'hidden-right';
+            const inClass = direction === 'left' ? 'hidden-right' : 'hidden-left';
+
+            exitElement.classList.remove('show');
+            exitElement.classList.add(outClass);
+            await sleep(500); 
+
+            if (updateDataFn) updateDataFn(); 
+
+            enterElement.style.transition = 'none';
+            enterElement.classList.remove('hidden-left', 'hidden-right', 'show');
+            enterElement.classList.add(inClass);
+            void enterElement.offsetWidth;
+
+            enterElement.style.transition = '';
+            enterElement.classList.remove(inClass);
+            enterElement.classList.add('show');
+
+            await sleep(600);
+        }
+
+        window.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowRight') transitionToNext();
+            else if (e.key === 'ArrowLeft') transitionToPrev();
+        });
+    </script>
+</body>
+</html>
