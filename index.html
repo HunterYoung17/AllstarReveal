@@ -607,6 +607,68 @@
             "Redwings": { file: "redwings.png", p: C.Green, s: C.Red },
             "Ducks": { file: "ducks.png", p: C.Tan, s: C.White },
             "Leviathans": { file: "leviathans.png", p: C.Teal, s: C.Blue }
+        };
+
+        const allStars = [
+            // CCS American Division (Blue)
+            { name: "Jerid", team: "Moose", league: "CCS", allStarTeam: "Blue" },
+            { name: "Blezzy", team: "Blasters", league: "CCS", allStarTeam: "Blue" },
+            { name: "Eli", team: "Pirates", league: "CCS", allStarTeam: "Blue" },
+            { name: "Cristian", team: "Blasters", league: "CCS", allStarTeam: "Blue" },
+            { name: "Rac1n", team: "Stars", league: "CCS", allStarTeam: "Blue" },
+            { name: "Dxge", team: "Pirates", league: "CCS", allStarTeam: "Blue" },
+            // CCS International Division (Orange)
+            { name: "Dyloh", team: "Zebras", league: "CCS", allStarTeam: "Orange" },
+            { name: "Oofy", team: "Flyers", league: "CCS", allStarTeam: "Orange" },
+            { name: "DainBramage", team: "Zebras", league: "CCS", allStarTeam: "Orange" },
+            { name: "Woerq", team: "Vipers", league: "CCS", allStarTeam: "Orange" },
+            { name: "Wrld", team: "Anglers", league: "CCS", allStarTeam: "Orange" },
+            { name: "Tomato", team: "Vipers", league: "CCS", allStarTeam: "Orange" },
+
+            // CPL American Division (Blue)
+            { name: "Decaf", team: "Mortars", league: "CPL", allStarTeam: "Blue" },
+            { name: "Slykooper", team: "Marauders", league: "CPL", allStarTeam: "Blue" },
+            { name: "Buddy", team: "Groundhogs", league: "CPL", allStarTeam: "Blue" },
+            { name: "BamBam", team: "Supernova", league: "CPL", allStarTeam: "Blue" },
+            { name: "Moon", team: "Supernova", league: "CPL", allStarTeam: "Blue" },
+            { name: "Nlyu", team: "SonicBoom", league: "CPL", allStarTeam: "Blue" },
+            // CPL International Division (Orange)
+            { name: "Panda", team: "Cobras", league: "CPL", allStarTeam: "Orange" },
+            { name: "Guccianii", team: "Warriors", league: "CPL", allStarTeam: "Orange" },
+            { name: "Landon", team: "Buffalo", league: "CPL", allStarTeam: "Orange" },
+            { name: "Kaza", team: "Fishermen", league: "CPL", allStarTeam: "Orange" },
+            { name: "HogdoBogdo", team: "Warriors", league: "CPL", allStarTeam: "Orange" },
+            { name: "Meepomic", team: "Lory", league: "CPL", allStarTeam: "Orange" },
+
+            // CAS American Division (Blue)
+            { name: "BluePhoenix", team: "Coyotes", league: "CAS", allStarTeam: "Blue" },
+            { name: "Pax", team: "BlackBears", league: "CAS", allStarTeam: "Blue" },
+            { name: "Prod", team: "Cannons", league: "CAS", allStarTeam: "Blue" },
+            { name: "Aiden", team: "BlackBears", league: "CAS", allStarTeam: "Blue" },
+            { name: "Sports", team: "Surge", league: "CAS", allStarTeam: "Blue" },
+            { name: "Gray", team: "Coyotes", league: "CAS", allStarTeam: "Blue" },
+            // CAS International Division (Orange)
+            { name: "Ren", team: "Copperheads", league: "CAS", allStarTeam: "Orange" },
+            { name: "Bankai", team: "Prowlers", league: "CAS", allStarTeam: "Orange" },
+            { name: "An7iix", team: "Shaman", league: "CAS", allStarTeam: "Orange" },
+            { name: "Slayer2k", team: "Copperheads", league: "CAS", allStarTeam: "Orange" },
+            { name: "Botco", team: "Skyhawks", league: "CAS", allStarTeam: "Orange" },
+            { name: "Dr Scrawny", team: "Elephants", league: "CAS", allStarTeam: "Orange" },
+
+            // CNL American Division (Blue)
+            { name: "Deplooped", team: "Ducks", league: "CNL", allStarTeam: "Blue" },
+            { name: "FireNinja", team: "Ballistics", league: "CNL", allStarTeam: "Blue" },
+            { name: "Ransome", team: "Rovers", league: "CNL", allStarTeam: "Blue" },
+            { name: "Yovanny", team: "Sound", league: "CNL", allStarTeam: "Blue" },
+            { name: "TazzyMike", team: "Ducks", league: "CNL", allStarTeam: "Blue" },
+            { name: "Pluooh", team: "Timberwolves", league: "CNL", allStarTeam: "Blue" },
+            // CNL International Division (Orange)
+            { name: "Terbiee", team: "Anacondas", league: "CNL", allStarTeam: "Orange" },
+            { name: "Striker", team: "Redwings", league: "CNL", allStarTeam: "Orange" },
+            { name: "Ghoulze", team: "Bushido", league: "CNL", allStarTeam: "Orange" },
+            { name: "Nava", team: "Anacondas", league: "CNL", allStarTeam: "Orange" },
+            { name: "Kazegurui", team: "Bushido", league: "CNL", allStarTeam: "Orange" },
+            { name: "Carsxnn", team: "Leviathans", league: "CNL", allStarTeam: "Orange" }
         ];
 
         const freestylers = [
@@ -696,6 +758,29 @@
                 img.onerror = () => resolve(null);
                 img.src = src;
             });
+        }
+
+        // Automatic Casing Fallback for GitHub Pages
+        function setModelWithFallback(imgElement, teamName) {
+            const candidates = [
+                `models/${teamName}model.png`,
+                `models/${teamName.toLowerCase()}model.png`,
+                `models/${teamName}Model.png`
+            ];
+
+            let attempt = 0;
+            function tryNext() {
+                if (attempt >= candidates.length) {
+                    imgElement.onerror = null;
+                    console.warn(`Could not load model for ${teamName}. Check repo filename case.`);
+                    return;
+                }
+                imgElement.src = candidates[attempt];
+                attempt++;
+            }
+
+            imgElement.onerror = tryNext;
+            tryNext();
         }
 
         async function initBroadcast() {
@@ -823,8 +908,6 @@
                 ui.pcStatus.textContent = p.isStarter ? "STARTER" : "RESERVE";
                 
                 ui.pcTeamLogo.src = `teamlogos/${teamConfigs[p.team].file}`;
-                
-                // Force strict lowercase conversion: "Shockwave" becomes "shockwavemodel.png"
                 ui.pcModelImg.src = `models/${p.team.toLowerCase()}model.png`;
 
                 ui.pcSp.textContent = p.seriesPlayed;
@@ -897,7 +980,6 @@
                     const logoFile = teamConf ? teamConf.file : '';
                     const champBadge = p.isDefendingChamp ? '<div class="fs-champ-badge">Defending Champ</div>' : '';
                     
-                    // Force strict lowercase conversion here too: "Shockwave" becomes "shockwavemodel.png"
                     html += `
                     <div class="freestyle-card" style="border-color: ${accentColor};">
                         ${champBadge}
