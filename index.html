@@ -533,8 +533,7 @@
 
     <div id="freestyle-board" class="showcase-element hidden-right">
         <h1 id="freestyle-league-title">LEAGUE FREESTYLE COMPETITORS</h1>
-        <div class="freestyle-grid" id="freestyle-cards-container">
-            </div>
+        <div class="freestyle-grid" id="freestyle-cards-container"></div>
     </div>
 
     <script>
@@ -672,7 +671,6 @@
             { name: "Carsxnn", team: "Leviathans", league: "CNL", allStarTeam: "Orange" }
         ];
 
-        // Freestyle competitors per league with defending champs tagged.
         const freestylers = [
             // CCS
             { name: "Mini", team: "Howlers", league: "CCS", isDefendingChamp: true },
@@ -695,116 +693,6 @@
             { name: "Rizada", team: "Anacondas", league: "CNL" },
             { name: "Killer", team: "Redwings", league: "CNL" }
         ];
-
-        // =========================================
-        // TIMELINE ENGINE & DATA FETCHING
-        // =========================================
-        const timeline = [];
-        let currentIndex = 0; 
-        let isAnimating = false;
-
-        async function initBroadcast() {
-            try {
-                const sheetUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ_1kLIy2noymz_4w0PepfaQMzezraS4pcRerX1Vy_eNXZK_Hb_le5ccEzVmiMDwBWd3j7t5_wETP1h/pub?output=csv";
-                const response = await fetch(sheetUrl);
-                const csvData = await response.text();
-                
-                const rows = csvData.split(/\r?\n/);
-                
-                for (let i = 1; i < rows.length; i++) {
-                    const cols = rows[i].split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/).map(c => c.replace(/^"|"$/g, '').trim());
-                    
-                    if (cols.length > 0 && cols[0]) {
-                        const playerName = cols[0];
-                        
-                        // Parse All Stars Data
-                        const playerObj = allStars.find(p => p.name.toLowerCase() === playerName.toLowerCase());
-                        if (playerObj) {
-                            playerObj.seriesPlayed = cols[2] || "0";
-                            playerObj.mvpr = cols[4] || "0.00";
-                            playerObj.avgScore = cols[6] || "0";
-                            playerObj.gpg = cols[8] || "0.00";
-                            playerObj.apg = cols[10] || "0.00";
-                            playerObj.svpg = cols[12] || "0.00";
-                            
-                            let pct = cols[13] || "0";
-                            if (!pct.includes('%')) {
-                                const numVal = parseFloat(pct);
-                                pct = (!isNaN(numVal) && numVal < 1) ? (numVal * 100).toFixed(1) + '%' : pct + '%';
-                            }
-                            playerObj.votePercent = pct;
-                            playerObj.selections = cols[14] || "1";
-                        }
-
-                        // Parse Freestyle Data (Cols P and Q)
-                        const fsObj = freestylers.find(p => p.name.toLowerCase() === playerName.toLowerCase());
-                        if (fsObj) {
-                            fsObj.fsApps = cols[15] || "1"; // Col P
-                            fsObj.fsTitles = cols[16] || "0"; // Col Q
-                        }
-                    }
-                }
-            } catch (err) {
-                console.error("Failed to load Google Sheet data:", err);
-            }
-
-            allStars.forEach(p => {
-                if (p.seriesPlayed === undefined) {
-                    p.seriesPlayed = "-"; p.mvpr = "-"; p.avgScore = "-";
-                    p.gpg = "-"; p.apg = "-"; p.svpg = "-"; p.votePercent = "-"; p.selections = "-";
-                }
-            });
-
-            freestylers.forEach(p => {
-                if (p.fsApps === undefined) {
-                    p.fsApps = "-"; p.fsTitles = "-";
-                }
-            });
-
-            buildTimeline();
-        }
-
-        function buildTimeline() {
-            timeline.push({ type: 'intro', el: ui.intro });
-
-            const leaguesOrder = ['CCS', 'CPL', 'CAS', 'CNL'];
-            
-            leaguesOrder.forEach(league => {
-                const bluePlayers = allStars.filter(p => p.league === league && p.allStarTeam === 'Blue');
-                const orangePlayers = allStars.filter(p => p.league === league && p.allStarTeam === 'Orange');
-                
-                if (bluePlayers.length > 0 || orangePlayers.length > 0) {
-                    timeline.push({ type: 'matchup', league: league, stinger: league, el: ui.matchup });
-                    
-                    if (bluePlayers.length > 0) {
-                        timeline.push({ type: 'division-intro', league: league, division: 'American', stinger: 'American', el: ui.divisionIntro });
-                        bluePlayers.forEach((player, index) => {
-                            player.isStarter = index < 3; 
-                            timeline.push({ type: 'player', data: player, teamStinger: player.team, el: ui.controller });
-                        });
-                    }
-
-                    if (orangePlayers.length > 0) {
-                        timeline.push({ type: 'division-intro', league: league, division: 'International', stinger: 'International', el: ui.divisionIntro });
-                        orangePlayers.forEach((player, index) => {
-                            player.isStarter = index < 3; 
-                            timeline.push({ type: 'player', data: player, teamStinger: player.team, el: ui.controller });
-                        });
-                    }
-                    
-                    // Add Roster Board with a League Stinger Transition
-                    timeline.push({ type: 'roster', league: league, stinger: league, el: ui.rosterBoard });
-
-                    // Add Freestyle Intro Slide with League Stinger
-                    timeline.push({ type: 'freestyle-intro', league: league, stinger: league, el: ui.freestyleIntro });
-                    
-                    // Add Freestyle Board with League Stinger Transition
-                    timeline.push({ type: 'freestyle', league: league, stinger: league, el: ui.freestyleBoard });
-                }
-            });
-        }
-
-        initBroadcast();
 
         // --- DOM ELEMENTS ---
         const ui = {
@@ -856,6 +744,142 @@
         };
 
         // =========================================
+        // TIMELINE ENGINE & DATA FETCHING
+        // =========================================
+        const timeline = [];
+        let currentIndex = 0; 
+        let isAnimating = false;
+
+        function preloadImage(src) {
+            return new Promise((resolve) => {
+                if (!src) return resolve(null);
+                const img = new Image();
+                img.onload = () => resolve(src);
+                img.onerror = () => resolve(null);
+                img.src = src;
+            });
+        }
+
+        // Automatic Casing Fallback for GitHub Pages
+        function setModelWithFallback(imgElement, teamName) {
+            const candidates = [
+                `models/${teamName}model.png`,
+                `models/${teamName.toLowerCase()}model.png`,
+                `models/${teamName}Model.png`
+            ];
+
+            let attempt = 0;
+            function tryNext() {
+                if (attempt >= candidates.length) {
+                    imgElement.onerror = null;
+                    console.warn(`Could not load model for ${teamName}. Check repo filename case.`);
+                    return;
+                }
+                imgElement.src = candidates[attempt];
+                attempt++;
+            }
+
+            imgElement.onerror = tryNext;
+            tryNext();
+        }
+
+        async function initBroadcast() {
+            try {
+                const sheetUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ_1kLIy2noymz_4w0PepfaQMzezraS4pcRerX1Vy_eNXZK_Hb_le5ccEzVmiMDwBWd3j7t5_wETP1h/pub?output=csv";
+                const response = await fetch(sheetUrl);
+                const csvData = await response.text();
+                
+                const rows = csvData.split(/\r?\n/);
+                
+                for (let i = 1; i < rows.length; i++) {
+                    const cols = rows[i].split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/).map(c => c.replace(/^"|"$/g, '').trim());
+                    
+                    if (cols.length > 0 && cols[0]) {
+                        const playerName = cols[0];
+                        
+                        const playerObj = allStars.find(p => p.name.toLowerCase() === playerName.toLowerCase());
+                        if (playerObj) {
+                            playerObj.seriesPlayed = cols[2] || "0";
+                            playerObj.mvpr = cols[4] || "0.00";
+                            playerObj.avgScore = cols[6] || "0";
+                            playerObj.gpg = cols[8] || "0.00";
+                            playerObj.apg = cols[10] || "0.00";
+                            playerObj.svpg = cols[12] || "0.00";
+                            
+                            let pct = cols[13] || "0";
+                            if (!pct.includes('%')) {
+                                const numVal = parseFloat(pct);
+                                pct = (!isNaN(numVal) && numVal < 1) ? (numVal * 100).toFixed(1) + '%' : pct + '%';
+                            }
+                            playerObj.votePercent = pct;
+                            playerObj.selections = cols[14] || "1";
+                        }
+
+                        const fsObj = freestylers.find(p => p.name.toLowerCase() === playerName.toLowerCase());
+                        if (fsObj) {
+                            fsObj.fsApps = cols[15] || "1";
+                            fsObj.fsTitles = cols[16] || "0";
+                        }
+                    }
+                }
+            } catch (err) {
+                console.error("Failed to load Google Sheet data:", err);
+            }
+
+            allStars.forEach(p => {
+                if (p.seriesPlayed === undefined) {
+                    p.seriesPlayed = "-"; p.mvpr = "-"; p.avgScore = "-";
+                    p.gpg = "-"; p.apg = "-"; p.svpg = "-"; p.votePercent = "-"; p.selections = "-";
+                }
+            });
+
+            freestylers.forEach(p => {
+                if (p.fsApps === undefined) {
+                    p.fsApps = "-"; p.fsTitles = "-";
+                }
+            });
+
+            buildTimeline();
+        }
+
+        function buildTimeline() {
+            timeline.push({ type: 'intro', el: ui.intro });
+
+            const leaguesOrder = ['CCS', 'CPL', 'CAS', 'CNL'];
+            
+            leaguesOrder.forEach(league => {
+                const bluePlayers = allStars.filter(p => p.league === league && p.allStarTeam === 'Blue');
+                const orangePlayers = allStars.filter(p => p.league === league && p.allStarTeam === 'Orange');
+                
+                if (bluePlayers.length > 0 || orangePlayers.length > 0) {
+                    timeline.push({ type: 'matchup', league: league, stinger: league, el: ui.matchup });
+                    
+                    if (bluePlayers.length > 0) {
+                        timeline.push({ type: 'division-intro', league: league, division: 'American', stinger: 'American', el: ui.divisionIntro });
+                        bluePlayers.forEach((player, index) => {
+                            player.isStarter = index < 3; 
+                            timeline.push({ type: 'player', data: player, teamStinger: player.team, el: ui.controller });
+                        });
+                    }
+
+                    if (orangePlayers.length > 0) {
+                        timeline.push({ type: 'division-intro', league: league, division: 'International', stinger: 'International', el: ui.divisionIntro });
+                        orangePlayers.forEach((player, index) => {
+                            player.isStarter = index < 3; 
+                            timeline.push({ type: 'player', data: player, teamStinger: player.team, el: ui.controller });
+                        });
+                    }
+                    
+                    timeline.push({ type: 'roster', league: league, stinger: league, el: ui.rosterBoard });
+                    timeline.push({ type: 'freestyle-intro', league: league, stinger: league, el: ui.freestyleIntro });
+                    timeline.push({ type: 'freestyle', league: league, stinger: league, el: ui.freestyleBoard });
+                }
+            });
+        }
+
+        initBroadcast();
+
+        // =========================================
         // DATA PREPARATION
         // =========================================
         function prepareElementData(state) {
@@ -884,7 +908,7 @@
                 ui.pcStatus.textContent = p.isStarter ? "STARTER" : "RESERVE";
                 
                 ui.pcTeamLogo.src = `teamlogos/${teamConfigs[p.team].file}`;
-                ui.pcModelImg.src = `models/${p.team}model.png`;
+                setModelWithFallback(ui.pcModelImg, p.team);
 
                 ui.pcSp.textContent = p.seriesPlayed;
                 ui.pcMvpr.textContent = p.mvpr;
@@ -961,7 +985,7 @@
                         ${champBadge}
                         <img src="teamlogos/${logoFile}" class="fs-logo" alt="logo">
                         <div class="fs-model-container">
-                            <img src="models/${p.team}model.png" class="fs-model" alt="model">
+                            <img src="models/${p.team}model.png" onerror="this.onerror=null; this.src='models/${p.team.toLowerCase()}model.png';" class="fs-model" alt="model">
                         </div>
                         <div class="fs-info">
                             <h3 class="fs-name" style="color: ${accentColor}">${p.name}</h3>
@@ -1030,15 +1054,19 @@
         }
 
         // =========================================
-        // ANIMATION RUNNERS
+        // ANIMATION RUNNERS (With Image Preload Protection)
         // =========================================
         
         async function runStingerSequence(stingerId, exitElement, enterElement, updateDataFn) {
             const config = stingerConfigs[stingerId]; 
+            const targetLogoSrc = `logos/${config.file}`;
+            
+            // Preload new image before playing animation
+            await preloadImage(targetLogoSrc);
             
             document.documentElement.style.setProperty('--main-bg', config.main);
             document.documentElement.style.setProperty('--accent-color', config.accent);
-            ui.stingerLogo.src = `logos/${config.file}`;
+            ui.stingerLogo.src = targetLogoSrc;
 
             ui.stingerContainer.classList.remove('play');
             void ui.stingerContainer.offsetWidth; 
@@ -1058,15 +1086,24 @@
 
             await sleep(1400); 
             ui.stingerContainer.classList.remove('play');
+            ui.stingerLogo.src = ''; // Clear image buffer
         }
 
         async function runTeamStingerSequence(teamName, exitElement, enterElement, updateDataFn) {
             const config = teamConfigs[teamName]; 
             if (!config) { console.error("Team config missing for: " + teamName); return; }
 
+            const targetLogoSrc = `teamlogos/${config.file}`;
+            
+            // Clear previous image immediately so old logo never persists
+            ui.tsLogo.src = '';
+            
+            // Preload the incoming logo
+            await preloadImage(targetLogoSrc);
+
             document.documentElement.style.setProperty('--ts-primary', config.p);
             document.documentElement.style.setProperty('--ts-secondary', config.s);
-            ui.tsLogo.src = `teamlogos/${config.file}`;
+            ui.tsLogo.src = targetLogoSrc;
 
             ui.teamStingerContainer.classList.add('play');
             ui.tsAccent.classList.remove('run-ts-accent');
@@ -1094,6 +1131,7 @@
 
             await sleep(1000); 
             ui.teamStingerContainer.classList.remove('play');
+            ui.tsLogo.src = ''; // Clear image buffer
         }
 
         async function slideBetweenElements(exitElement, enterElement, direction, updateDataFn) {
